@@ -6,6 +6,7 @@ const TerserWebpackPlugin = require('terser-webpack-plugin');
 const OptimizeCssAssetWebpackPlugin = require('optimize-css-assets-webpack-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 const fs = require('fs');
+const webpack = require('webpack');
 
 const isDev = process.env.NODE_ENV === 'development';
 const isProd = !isDev;
@@ -63,7 +64,13 @@ const cssLoaders = extra => {
     }
   ];
   if (extra) {
-    loaders.push(extra)
+    if ( Array.isArray(extra) ) {
+      extra.forEach((someLoader) => {
+        loaders.push(someLoader)
+      })
+    } else {
+      loaders.push(extra)
+    }
   }
   return loaders
 }
@@ -134,7 +141,18 @@ module.exports = {
       },
       {
         test: /\.s[ac]ss$/,
-        use: cssLoaders('sass-loader')
+        use: cssLoaders([
+          {
+            loader: 'postcss-loader',
+            options: {
+              plugins: function () { // postcss plugins, can be exported to postcss.config.js
+                return [
+                  require('autoprefixer')
+                ];
+              }
+            }
+          },
+          { loader: 'sass-loader' } ])
       },
       {
         test: /\.(png|jpg|svg|gif)$/,
@@ -182,6 +200,11 @@ module.exports = {
         from: path.resolve(__dirname, 'src/img'),
         to: path.resolve(__dirname, 'dist/img')
       }
-    ])
+    ]),
+    new webpack.ProvidePlugin({
+      $: 'jquery',
+      jQuery: 'jquery',
+      'window.jQuery': 'jquery'
+    }),
   ].concat(htmlPlugins)
 };
